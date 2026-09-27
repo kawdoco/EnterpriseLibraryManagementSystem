@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Library Management System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-dark mb-4">
+    <div class="container">
+        <span class="navbar-brand mb-0 h1">&#128218; Library Management System</span>
+    </div>
+</nav>
+
+<div class="container pb-5">
+
+    <!-- Real-time alert from the last RFID scan -->
+    <div th:if="${scanMessage != null}"
+         th:classappend="${scanSuccess} ? 'alert-success' : 'alert-danger'"
+         class="alert alert-dismissible fade show shadow-sm" role="alert">
+        <strong th:text="${scanSuccess} ? 'Success:' : 'Error:'"></strong>
+        <span th:text="${scanMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- RFID Scan Panel -->
+        <div class="col-lg-4">
+            <div class="card p-4">
+                <h5 class="mb-3">RFID Scan Station</h5>
+                <form th:action="@{/scan}" method="post">
+                    <div class="mb-3">
+                        <label for="userId" class="form-label">Member</label>
+                        <select class="form-select" id="userId" name="userId" required>
+                            <option value="" disabled selected>Select member...</option>
+                            <option th:each="u : ${users}"
+                                    th:value="${u.id}"
+                                    th:text="${u.name} + ' (' + ${u.email} + ')' + (${u.blacklisted} ? ' \u2014 BLACKLISTED' : '')">
+                            </option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="rfidTag" class="form-label">Scan / Enter RFID Tag</label>
+                        <input type="text" class="form-control scan-input" id="rfidTag" name="rfidTag"
+                               placeholder="Scan tag here..." autofocus autocomplete="off" required>
+                        <div class="form-text">Works with USB HID keyboard-emulation RFID readers, which "type"
+                            the tag and press Enter to submit.</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Process Scan</button>
+                </form>
+            </div>
+
+            <div class="card p-4 mt-4">
+                <h5 class="mb-3">Top 5 Popular Books</h5>
+                <table class="table table-sm mb-0">
+                    <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th class="text-end">Borrows</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="b : ${popularBooks}">
+                        <td th:text="${b.title}"></td>
+                        <td class="text-end" th:text="${b.borrowCount}"></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(popularBooks)}">
+                        <td colspan="2" class="text-muted text-center">No borrow history yet.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Full Catalog -->
+        <div class="col-lg-8">
+            <div class="card p-4">
+                <h5 class="mb-3">All Books</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Author</th>
+                            <th>RFID Tag</th>
+                            <th>Status</th>
+                            <th class="text-end">Times Borrowed</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="book : ${books}">
+                            <td th:text="${book.title}"></td>
+                            <td th:text="${book.author}"></td>
+                            <td><code th:text="${book.rfidTag}"></code></td>
+                            <td>
+                                <span class="badge"
+                                      th:classappend="${book.status == 'AVAILABLE'} ? 'badge-available' : 'badge-borrowed'"
+                                      th:text="${book.status}">
+                                </span>
+                            </td>
+                            <td class="text-end" th:text="${book.borrowCount}"></td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(books)}">
+                            <td colspan="5" class="text-muted text-center">No books in the catalog yet.</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/scan-focus.js}"></script>
+
+</body>
+</html>

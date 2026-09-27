@@ -1,0 +1,32 @@
+body {
+    background-color: #f4f6f9;
+}
+
+.navbar-brand {
+    font-weight: 600;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+    border-radius: 12px;
+}
+
+.scan-input {
+    font-size: 1.25rem;
+    letter-spacing: 1px;
+}
+
+.badge-available {
+    background-color: #198754;
+}
+
+.badge-borrowed {
+    background-color: #dc3545;
+}
+
+table thead th {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    color: #6c757d;
+}
