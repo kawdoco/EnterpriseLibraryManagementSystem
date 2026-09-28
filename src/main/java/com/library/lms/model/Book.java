@@ -1,25 +1,9 @@
 package com.library.lms.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import jakarta.persistence.*;
 
-/**
- * A physical library book, identified for scanning purposes by the unique
- * RFID tag attached to it. borrowCount is incremented every time the book
- * is checked out and powers the "popular books" analytics query.
- */
 @Entity
 @Table(name = "books")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class Book {
 
     @Id
@@ -32,15 +16,47 @@ public class Book {
     @Column(nullable = false)
     private String author;
 
-    @Column(nullable = false, unique = true)
-    private String rfidTag;
+    private String isbn;
 
-    /**
-     * Expected values: "AVAILABLE", "BORROWED".
-     */
-    @Column(nullable = false)
-    private String status = "AVAILABLE";
+    @Column(unique = true, nullable = false)
+    private String rfidTagId; // RFID Tag attached to physical book
 
-    @Column(nullable = false)
-    private int borrowCount = 0;
+    private int totalCopies;
+    private int availableCopies;
+
+    private boolean newArrival = true;
+
+    public Book() {}
+
+    public Book(String title, String author, String isbn, String rfidTagId, int totalCopies) {
+        this.title = title;
+        this.author = author;
+        this.isbn = isbn;
+        this.rfidTagId = rfidTagId;
+        this.totalCopies = totalCopies;
+        this.availableCopies = totalCopies;
+    }
+
+    // Getters and Setters
+    public Long getId() { return id; }
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
+
+    public String getAuthor() { return author; }
+    public void setAuthor(String author) { this.author = author; }
+
+    public String getIsbn() { return isbn; }
+    public void setIsbn(String isbn) { this.isbn = isbn; }
+
+    public String getRfidTagId() { return rfidTagId; }
+    public void setRfidTagId(String rfidTagId) { this.rfidTagId = rfidTagId; }
+
+    public int getTotalCopies() { return totalCopies; }
+    public void setTotalCopies(int totalCopies) { this.totalCopies = totalCopies; }
+
+    public int getAvailableCopies() { return availableCopies; }
+    public void setAvailableCopies(int availableCopies) { this.availableCopies = availableCopies; }
+
+    public boolean isNewArrival() { return newArrival; }
+    public void setNewArrival(boolean newArrival) { this.newArrival = newArrival; }
 }

@@ -23,39 +23,28 @@ public class LibraryController {
     private final UserRepository userRepository;
 
     public LibraryController(LibraryService libraryService,
-                              BookRepository bookRepository,
-                              UserRepository userRepository) {
+                             BookRepository bookRepository,
+                             UserRepository userRepository) {
         this.libraryService = libraryService;
         this.bookRepository = bookRepository;
         this.userRepository = userRepository;
     }
 
-    /**
-     * Main dashboard: full catalog, top-5 popular books, and the member list
-     * used to populate the scan form's dropdown.
-     */
     @GetMapping("/")
     public String dashboard(Model model) {
         List<Book> allBooks = bookRepository.findAll();
-        List<Book> popularBooks = bookRepository.findTop5ByOrderByBorrowCountDesc();
         List<User> allUsers = userRepository.findAll();
 
         model.addAttribute("books", allBooks);
-        model.addAttribute("popularBooks", popularBooks);
         model.addAttribute("users", allUsers);
 
         return "index";
     }
 
-    /**
-     * Handles an incoming RFID scan. Works equally well with a REST-style
-     * POST or a USB HID keyboard-emulation scanner that "types" the tag
-     * into the form field and submits it (e.g. via an Enter keystroke).
-     */
     @PostMapping("/scan")
     public String scan(@RequestParam("rfidTag") String rfidTag,
-                        @RequestParam(value = "userId", required = false) Long userId,
-                        RedirectAttributes redirectAttributes) {
+                       @RequestParam(value = "userId", required = false) Long userId,
+                       RedirectAttributes redirectAttributes) {
 
         ScanResult result = libraryService.handleRfidScan(rfidTag, userId);
 
