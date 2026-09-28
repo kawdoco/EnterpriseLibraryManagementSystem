@@ -1,38 +1,23 @@
 package com.library.lms.service;
 
 import com.library.lms.dto.ScanResult;
-import com.library.lms.model.Book;
-import com.library.lms.model.Transaction;
-import com.library.lms.model.User;
-import com.library.lms.repository.BookRepository;
-import com.library.lms.repository.TransactionRepository;
-import com.library.lms.repository.UserRepository;
+import com.library.lms.model.*;
+import com.library.lms.repository.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
-/**
- * Core business logic for the RFID-driven borrow/return workflow.
- *
- * Scanning a tag is a single, overloaded action from the librarian's point
- * of view: scan an AVAILABLE book -> it gets borrowed; scan a BORROWED book
- * -> it gets returned (and a fine is assessed if it's late).
- */
 @Service
 public class LibraryServiceImpl implements LibraryService {
-
-    private static final String STATUS_AVAILABLE = "AVAILABLE";
-    private static final String STATUS_BORROWED = "BORROWED";
-    private static final String STATUS_ACTIVE = "ACTIVE";
-    private static final String STATUS_RETURNED = "RETURNED";
 
     private final BookRepository bookRepository;
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
+    private final FineRepository fineRepository;
 
     @Value("${library.loan.duration-days:14}")
     private int loanDurationDays;
@@ -45,10 +30,12 @@ public class LibraryServiceImpl implements LibraryService {
 
     public LibraryServiceImpl(BookRepository bookRepository,
                                UserRepository userRepository,
-                               TransactionRepository transactionRepository) {
+                               TransactionRepository transactionRepository,
+                               FineRepository fineRepository) {
         this.bookRepository = bookRepository;
         this.userRepository = userRepository;
         this.transactionRepository = transactionRepository;
+        this.fineRepository = fineRepository;
     }
 
     @Override
@@ -58,15 +45,24 @@ public class LibraryServiceImpl implements LibraryService {
         if (rfidTag == null || rfidTag.isBlank()) {
             return new ScanResult(false, "No RFID tag was scanned.", null, 0.0);
         }
-        if (userId == null) {
-            return new ScanResult(false, "Please select a member before scanning.", null, 0.0);
-        }
 
-        Optional<Book> bookOpt = bookRepository.findByRfidTag(rfidTag.trim());
+        // RFID එක අනුව අදාළ පොත සෙවීම
+        Optional<Book> bookOpt = bookRepository.findByRfidTagId(rfidTag.trim());
         if (bookOpt.isEmpty()) {
             return new ScanResult(false, "No book found for RFID tag '" + rfidTag + "'.", null, 0.0);
         }
         Book book = bookOpt.get();
+
+        // 1. පොත දැනට Borrow කර ඇත්නම් -> Return Process එක සිදු කරයි
+        Optional<Transaction> activeTxOpt = transactionRepository.findByBookAndStatus(book, BorrowStatus.BORROWED);
+        if (activeTxOpt.isPresent()) {
+            return processReturn(book, activeTxOpt.get());
+        }
+
+        // 2. පොත Borrow කර නැත්නම් -> New Borrow Process එක සිදු කරයි (UserId අවශ්‍ය වේ)
+        if (userId == null) {
+            return new ScanResult(false, "Please select a member before issuing a new book.", null, 0.0);
+        }
 
         Optional<User> userOpt = userRepository.findById(userId);
         if (userOpt.isEmpty()) {
@@ -74,108 +70,75 @@ public class LibraryServiceImpl implements LibraryService {
         }
         User user = userOpt.get();
 
-        if (STATUS_AVAILABLE.equalsIgnoreCase(book.getStatus())) {
-            // Blacklisting only prevents NEW borrows. A blacklisted member must
-            // still be able to return books they are already holding, otherwise
-            // those books would be stuck as BORROWED forever with no way back in.
-            if (user.isBlacklisted()) {
-                return new ScanResult(false,
-                        "Access denied: " + user.getName()
-                                + " is currently blacklisted due to unpaid fines and cannot borrow books.",
-                        null, 0.0);
-            }
-            return processBorrow(book, user);
-        } else if (STATUS_BORROWED.equalsIgnoreCase(book.getStatus())) {
-            return processReturn(book);
+        if (user.isBlacklisted()) {
+            return new ScanResult(false,
+                    "Access denied: " + user.getName() + " is currently blacklisted and cannot borrow books.",
+                    null, 0.0);
         }
 
-        return new ScanResult(false,
-                "Book '" + book.getTitle() + "' has an unrecognized status: " + book.getStatus(),
-                null, 0.0);
+        if (book.getAvailableCopies() <= 0) {
+            return new ScanResult(false, "No available copies left for '" + book.getTitle() + "'.", null, 0.0);
+        }
+
+        return processBorrow(book, user);
     }
 
     private ScanResult processBorrow(Book book, User user) {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDate today = LocalDate.now();
 
-        book.setStatus(STATUS_BORROWED);
-        book.setBorrowCount(book.getBorrowCount() + 1);
+        book.setAvailableCopies(book.getAvailableCopies() - 1);
         bookRepository.save(book);
 
-        Transaction transaction = new Transaction();
-        transaction.setBook(book);
-        transaction.setUser(user);
-        transaction.setBorrowDate(now);
-        transaction.setDueDate(now.plusDays(loanDurationDays));
-        transaction.setReturnDate(null);
-        transaction.setFineAmount(0.0);
-        transaction.setStatus(STATUS_ACTIVE);
+        Transaction transaction = new Transaction(user, book, today, today.plusDays(loanDurationDays));
         transactionRepository.save(transaction);
 
-        String message = String.format(
-                "'%s' has been borrowed by %s. Due back on %s.",
-                book.getTitle(), user.getName(), transaction.getDueDate().toLocalDate());
+        String message = String.format("'%s' has been borrowed by %s. Due back on %s.",
+                book.getTitle(), user.getName(), transaction.getDueDate());
 
         return new ScanResult(true, message, "BORROW", 0.0);
     }
 
-    private ScanResult processReturn(Book book) {
-        Optional<Transaction> activeTxOpt = transactionRepository.findByBookAndStatus(book, STATUS_ACTIVE);
-
-        if (activeTxOpt.isEmpty()) {
-            // Data-consistency guard: book says BORROWED but there's no open loan.
-            book.setStatus(STATUS_AVAILABLE);
-            bookRepository.save(book);
-            return new ScanResult(false,
-                    "No active loan record found for '" + book.getTitle()
-                            + "'. Status has been reset to AVAILABLE.", null, 0.0);
-        }
-
-        Transaction transaction = activeTxOpt.get();
-        LocalDateTime now = LocalDateTime.now();
-        transaction.setReturnDate(now);
-
-        double fine = calculateFine(transaction.getDueDate(), now);
-        transaction.setFineAmount(fine);
-        transaction.setStatus(STATUS_RETURNED);
+    private ScanResult processReturn(Book book, Transaction transaction) {
+        LocalDate today = LocalDate.now();
+        transaction.setReturnDate(today);
+        transaction.setStatus(BorrowStatus.RETURNED);
         transactionRepository.save(transaction);
 
-        book.setStatus(STATUS_AVAILABLE);
+        book.setAvailableCopies(book.getAvailableCopies() + 1);
         bookRepository.save(book);
 
+        double fineAmount = calculateFine(transaction.getDueDate(), today);
         User user = transaction.getUser();
         boolean justBlacklisted = false;
-        if (fine > blacklistThreshold) {
-            user.setBlacklisted(true);
-            userRepository.save(user);
-            justBlacklisted = true;
+
+        if (fineAmount > 0) {
+            Fine fine = new Fine(transaction, fineAmount);
+            fineRepository.save(fine);
+
+            if (fineAmount >= blacklistThreshold) {
+                user.setBlacklisted(true);
+                userRepository.save(user);
+                justBlacklisted = true;
+            }
         }
 
         String message;
-        if (fine > 0) {
-            message = String.format(
-                    "'%s' returned by %s. Late fine: LKR %.2f%s",
-                    book.getTitle(), user.getName(), fine,
-                    justBlacklisted ? " — member has been BLACKLISTED for exceeding the fine limit." : "");
+        if (fineAmount > 0) {
+            message = String.format("'%s' returned by %s. Late fine: LKR %.2f%s",
+                    book.getTitle(), user.getName(), fineAmount,
+                    justBlacklisted ? " — member has been BLACKLISTED for high unpaid fine." : "");
         } else {
-            message = String.format(
-                    "'%s' returned by %s on time. No fine due.", book.getTitle(), user.getName());
+            message = String.format("'%s' returned by %s on time. No fine due.", book.getTitle(), user.getName());
         }
 
-        return new ScanResult(true, message, "RETURN", fine);
+        return new ScanResult(true, message, "RETURN", fineAmount);
     }
 
-    /**
-     * Days-late * daily rate, with any partial day counted as a full day late.
-     */
-    private double calculateFine(LocalDateTime dueDate, LocalDateTime returnDate) {
-        if (!returnDate.isAfter(dueDate)) {
-            return 0.0;
+    private double calculateFine(LocalDate dueDate, LocalDate returnDate) {
+        if (returnDate.isAfter(dueDate)) {
+            long daysLate = ChronoUnit.DAYS.between(dueDate, returnDate);
+            return daysLate * dailyFineRate;
         }
-        long minutesLate = Duration.between(dueDate, returnDate).toMinutes();
-        long daysLate = (long) Math.ceil(minutesLate / (24.0 * 60.0));
-        if (daysLate < 1) {
-            daysLate = 1;
-        }
-        return daysLate * dailyFineRate;
+        return 0.0;
     }
 }
