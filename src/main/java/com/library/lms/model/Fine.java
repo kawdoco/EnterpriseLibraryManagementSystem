@@ -1,7 +1,7 @@
 package com.library.lms.model;
 
 import jakarta.persistence.*;
-import com.library.lms.model.FineStatus; 
+
 
 @Entity
 @Table(name = "fines")
