@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(${editing} ? 'Edit book' : 'Register book')}"></head>
+<body>
+<div class="app-shell">
+    <nav th:replace="~{fragments/layout :: sidebar('books')}"></nav>
+    <div class="app-main">
+        <header th:replace="~{fragments/layout :: topbar(${editing} ? 'Edit book' : 'Register book')}"></header>
+        <main class="app-content">
+            <div th:replace="~{fragments/layout :: notifications}"></div>
+
+            <div class="row g-3">
+                <div class="col-xl-8">
+                    <div class="card">
+                        <div class="card-body">
+                            <p class="text-muted small">Each row is one <strong>physical copy</strong>. Register every copy separately; copies of the same ISBN each need their own RFID tag.</p>
+                            <form th:object="${bookForm}"
+                                  th:action="${editing} ? @{/books/{id}/edit(id=${book.id})} : @{/books}"
+                                  method="post" novalidate>
+
+                                <div class="alert alert-danger" role="alert" th:if="${#fields.hasGlobalErrors()}">
+                                    <div th:each="e : ${#fields.globalErrors()}" th:text="${e}">Error</div>
+                                </div>
+
+                                <div class="row g-3">
+                                    <div class="col-md-5">
+                                        <label for="isbn" class="form-label required">ISBN</label>
+                                        <input type="text" class="form-control uid" id="isbn" th:field="*{isbn}"
+                                               th:classappend="${#fields.hasErrors('isbn')} ? 'is-invalid'" placeholder="ISBN-10 or ISBN-13" required>
+                                        <div class="invalid-feedback" th:errors="*{isbn}">error</div>
+                                    </div>
+                                    <div class="col-md-7">
+                                        <label for="title" class="form-label required">Title</label>
+                                        <input type="text" class="form-control" id="title" th:field="*{title}"
+                                               th:classappend="${#fields.hasErrors('title')} ? 'is-invalid'" required>
+                                        <div class="invalid-feedback" th:errors="*{title}">error</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="author" class="form-label required">Author</label>
+                                        <input type="text" class="form-control" id="author" th:field="*{author}"
+                                               th:classappend="${#fields.hasErrors('author')} ? 'is-invalid'" required>
+                                        <div class="invalid-feedback" th:errors="*{author}">error</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="publisher" class="form-label">Publisher</label>
+                                        <input type="text" class="form-control" id="publisher" th:field="*{publisher}"
+                                               th:classappend="${#fields.hasErrors('publisher')} ? 'is-invalid'">
+                                        <div class="invalid-feedback" th:errors="*{publisher}">error</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="category" class="form-label">Category</label>
+                                        <input type="text" class="form-control" id="category" th:field="*{category}"
+                                               th:classappend="${#fields.hasErrors('category')} ? 'is-invalid'">
+                                        <div class="invalid-feedback" th:errors="*{category}">error</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="publicationYear" class="form-label">Publication year</label>
+                                        <input type="number" class="form-control" id="publicationYear" th:field="*{publicationYear}"
+                                               th:classappend="${#fields.hasErrors('publicationYear')} ? 'is-invalid'" min="1000" max="2100">
+                                        <div class="invalid-feedback" th:errors="*{publicationYear}">error</div>
+                                    </div>
+                                    <div class="col-12">
+                                        <label for="rfidTagUid" class="form-label">RFID tag UID</label>
+                                        <input type="text" class="form-control uid uid-input" id="rfidTagUid" th:field="*{rfidTagUid}"
+                                               th:classappend="${#fields.hasErrors('rfidTagUid')} ? 'is-invalid'"
+                                               placeholder="e.g. 04A1B2C3D4  (optional, can be assigned later)" autocomplete="off">
+                                        <div class="form-text">One tag per physical copy. A tag cannot also be used as a member card.</div>
+                                        <div class="invalid-feedback" th:errors="*{rfidTagUid}">error</div>
+                                        <div class="mt-1" data-capture-wrap><button type="button" class="btn btn-sm btn-outline-secondary" data-capture-target="#rfidTagUid" data-capture-kind="book"><i class="bi bi-broadcast"></i> Scan tag with reader</button><span data-capture-status class="small ms-2"></span></div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-4 d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary"><i class="bi bi-check2"></i> <span th:text="${editing} ? 'Save changes' : 'Register book'">Save</span></button>
+                                    <a class="btn btn-outline-secondary" th:href="@{/books}">Cancel</a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-4" th:if="${editing}">
+                    <div class="card">
+                        <div class="card-header">Assign or replace RFID tag</div>
+                        <div class="card-body">
+                            <p class="small text-muted mb-2">Current status: <span th:replace="~{fragments/layout :: bookStatus(${book.status.name()}, ${book.active})}"></span></p>
+                            <form th:action="@{/books/{id}/tag(id=${book.id})}" method="post" class="d-flex gap-2">
+                                <label for="tagUid" class="visually-hidden">Tag UID</label>
+                                <input type="text" class="form-control uid uid-input" id="tagUid" name="rfidTagUid" placeholder="Tag UID" required autocomplete="off">
+                                <button type="submit" class="btn btn-outline-primary text-nowrap">Assign</button>
+                            </form>
+                            <div class="mt-1" data-capture-wrap><button type="button" class="btn btn-sm btn-outline-secondary" data-capture-target="#tagUid" data-capture-kind="book"><i class="bi bi-broadcast"></i> Scan tag with reader</button><span data-capture-status class="small ms-2"></span></div>
+                            <p class="small text-muted mt-2 mb-0">The tag cannot be changed while the book is borrowed.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+    </div>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

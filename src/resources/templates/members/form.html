@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(${editing} ? 'Edit member' : 'Register member')}"></head>
+<body>
+<div class="app-shell">
+    <nav th:replace="~{fragments/layout :: sidebar('members')}"></nav>
+    <div class="app-main">
+        <header th:replace="~{fragments/layout :: topbar(${editing} ? 'Edit member' : 'Register member')}"></header>
+        <main class="app-content">
+            <div th:replace="~{fragments/layout :: notifications}"></div>
+
+            <div class="card" style="max-width: 760px;">
+                <div class="card-body">
+                    <form th:object="${memberForm}"
+                          th:action="${editing} ? @{/members/{id}/edit(id=${memberId})} : @{/members}"
+                          method="post" novalidate>
+
+                        <div class="alert alert-danger" role="alert" th:if="${#fields.hasGlobalErrors()}">
+                            <div th:each="e : ${#fields.globalErrors()}" th:text="${e}">Error</div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="memberCode" class="form-label">Member code</label>
+                                <input type="text" class="form-control" id="memberCode" th:field="*{memberCode}"
+                                       th:classappend="${#fields.hasErrors('memberCode')} ? 'is-invalid'" placeholder="Auto-generated if empty">
+                                <div class="invalid-feedback" th:errors="*{memberCode}">error</div>
+                            </div>
+                            <div class="col-md-8">
+                                <label for="fullName" class="form-label required">Full name</label>
+                                <input type="text" class="form-control" id="fullName" th:field="*{fullName}"
+                                       th:classappend="${#fields.hasErrors('fullName')} ? 'is-invalid'" required>
+                                <div class="invalid-feedback" th:errors="*{fullName}">error</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" th:field="*{email}"
+                                       th:classappend="${#fields.hasErrors('email')} ? 'is-invalid'">
+                                <div class="form-text">Used for due-date reminders.</div>
+                                <div class="invalid-feedback" th:errors="*{email}">error</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="phone" class="form-label">Phone</label>
+                                <input type="tel" class="form-control" id="phone" th:field="*{phone}"
+                                       th:classappend="${#fields.hasErrors('phone')} ? 'is-invalid'">
+                                <div class="invalid-feedback" th:errors="*{phone}">error</div>
+                            </div>
+                            <div class="col-12">
+                                <label for="address" class="form-label">Address</label>
+                                <textarea class="form-control" id="address" rows="2" th:field="*{address}"
+                                          th:classappend="${#fields.hasErrors('address')} ? 'is-invalid'"></textarea>
+                                <div class="invalid-feedback" th:errors="*{address}">error</div>
+                            </div>
+                            <div class="col-12">
+                                <label for="rfidCardUid" class="form-label">NFC card UID</label>
+                                <input type="text" class="form-control uid uid-input" id="rfidCardUid" th:field="*{rfidCardUid}"
+                                       th:classappend="${#fields.hasErrors('rfidCardUid')} ? 'is-invalid'"
+                                       placeholder="e.g. 04A1B2C3  (optional, can be assigned later)" autocomplete="off">
+                                <div class="form-text">Hexadecimal, separators allowed. Each card may belong to one member only.
+                                    <span th:if="${editing}" class="text-warning-emphasis">Leaving this empty removes the current card.</span></div>
+                                <div class="invalid-feedback" th:errors="*{rfidCardUid}">error</div>
+                                <div class="mt-1" data-capture-wrap><button type="button" class="btn btn-sm btn-outline-secondary" data-capture-target="#rfidCardUid" data-capture-kind="member"><i class="bi bi-broadcast"></i> Scan card with reader</button><span data-capture-status class="small ms-2"></span></div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 d-flex gap-2">
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-check2"></i> <span th:text="${editing} ? 'Save changes' : 'Register member'">Save</span></button>
+                            <a class="btn btn-outline-secondary" th:href="${editing} ? @{/members/{id}(id=${memberId})} : @{/members}">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+    </div>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head('Dashboard')}"></head>
+<body>
+<div class="app-shell">
+    <nav th:replace="~{fragments/layout :: sidebar('dashboard')}"></nav>
+    <div class="app-main">
+        <header th:replace="~{fragments/layout :: topbar('Dashboard')}"></header>
+        <main class="app-content">
+            <div th:replace="~{fragments/layout :: notifications}"></div>
+
+            <!-- First-run guidance: visible only until at least one member and one book exist -->
+            <div class="card border-primary mb-3" th:if="${stats.totalMembers == 0 or stats.totalBooks == 0}">
+                <div class="card-body">
+                    <h2 class="h5 mb-1"><i class="bi bi-rocket-takeoff"></i> Welcome to <span th:text="${libraryName}">Smart Library</span></h2>
+                    <p class="text-muted mb-3">Four quick steps to lend your first book:</p>
+                    <ol class="list-unstyled mb-0">
+                        <li class="d-flex gap-2 mb-2">
+                            <i class="bi" th:classappend="${stats.totalMembers > 0} ? 'bi-check-circle-fill text-success' : 'bi-circle text-muted'"></i>
+                            <span><a th:href="@{/members/new}">Register a member</a>, then press <em>Scan card with reader</em> and tap their NFC card to link it.</span>
+                        </li>
+                        <li class="d-flex gap-2 mb-2">
+                            <i class="bi" th:classappend="${stats.totalBooks > 0} ? 'bi-check-circle-fill text-success' : 'bi-circle text-muted'"></i>
+                            <span><a th:href="@{/books/new}">Register a book</a>. Every physical copy gets its own RFID tag: press <em>Scan tag with reader</em> and tap it.</span>
+                        </li>
+                        <li class="d-flex gap-2 mb-2">
+                            <i class="bi bi-circle text-muted"></i>
+                            <span>Check the <strong>Reader</strong> badge at the top right. Green means the Arduino is connected.</span>
+                        </li>
+                        <li class="d-flex gap-2">
+                            <i class="bi bi-circle text-muted"></i>
+                            <span>Open the <a th:href="@{/rfid/counter}">RFID Counter</a>: tap the member's card, then the book to borrow. Tap a borrowed book with no member selected to return it.</span>
+                        </li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-6 col-md-4 col-xl-2"><div class="card stat-card"><div class="icon bg-c-blue"><i class="bi bi-people"></i></div>
+                    <div><div class="value" th:text="${stats.totalMembers}">0</div><div class="label">Members</div><div class="small text-muted">registered readers</div></div></div></div>
+                <div class="col-6 col-md-4 col-xl-2"><div class="card stat-card"><div class="icon bg-c-violet"><i class="bi bi-journal-bookmark"></i></div>
+                    <div><div class="value" th:text="${stats.totalBooks}">0</div><div class="label">Books</div><div class="small text-muted">physical copies</div></div></div></div>
+                <div class="col-6 col-md-4 col-xl-2"><div class="card stat-card"><div class="icon bg-c-teal"><i class="bi bi-check2-circle"></i></div>
+                    <div><div class="value" th:text="${stats.availableBooks}">0</div><div class="label">Available</div><div class="small text-muted">on the shelf</div></div></div></div>
+                <div class="col-6 col-md-4 col-xl-2"><div class="card stat-card"><div class="icon bg-c-amber"><i class="bi bi-box-arrow-up-right"></i></div>
+                    <div><div class="value" th:text="${stats.borrowedBooks}">0</div><div class="label">On loan</div><div class="small text-muted">borrowed right now</div></div></div></div>
+                <div class="col-6 col-md-4 col-xl-2"><div class="card stat-card"><div class="icon bg-c-red"><i class="bi bi-alarm"></i></div>
+                    <div><div class="value" th:text="${stats.overdueBooks}">0</div><div class="label">Overdue</div><div class="small text-muted">past the due date</div></div></div></div>
+                <div class="col-6 col-md-4 col-xl-2"><div class="card stat-card"><div class="icon bg-c-slate"><i class="bi bi-slash-circle"></i></div>
+                    <div><div class="value" th:text="${stats.blacklistedMembers}">0</div><div class="label">Blacklisted</div><div class="small text-muted">blocked from borrowing</div></div></div></div>
+            </div>
+
+            <!-- Fines: administrators only -->
+            <div class="card mb-3" sec:authorize="hasRole('ADMIN')">
+                <div class="card-header">Fines <span class="text-muted small fw-normal">(late-return charges in <span th:text="${currency}">LKR</span>)</span></div>
+                <div class="card-body">
+                    <div class="row text-center g-3">
+                        <div class="col-md-4">
+                            <div class="text-muted small">Charged</div>
+                            <div class="fs-5 fw-semibold"><span th:replace="~{fragments/layout :: money(${stats.assessedFines})}"></span></div>
+                            <div class="small text-muted">added when late books are returned</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-muted small">Paid</div>
+                            <div class="fs-5 fw-semibold text-success"><span th:replace="~{fragments/layout :: money(${stats.collectedFines})}"></span></div>
+                            <div class="small text-muted">recorded payments only</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-muted small">Still owed</div>
+                            <div class="fs-5 fw-semibold text-danger"><span th:replace="~{fragments/layout :: money(${stats.outstandingFines})}"></span></div>
+                            <div class="small text-muted">charged minus paid</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-xl-5">
+                    <div class="card h-100">
+                        <div class="card-header">Top 5 most borrowed books</div>
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead><tr><th>Title</th><th>Author</th><th class="text-end">Borrowed</th></tr></thead>
+                                <tbody>
+                                <tr th:each="b : ${stats.topBooks}">
+                                    <td th:text="${b.title}">Title</td>
+                                    <td th:text="${b.author}">Author</td>
+                                    <td class="text-end"><span class="badge text-bg-primary" th:text="${b.borrowCount}">0</span></td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(stats.topBooks)}"><td colspan="3" class="text-center text-muted py-4">No books registered yet.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-7">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span>Recent borrowing and return activity</span>
+                            <a class="btn btn-sm btn-outline-secondary" th:href="@{/transactions}">All transactions</a>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead><tr><th>Member</th><th>Book</th><th>Activity</th><th>When</th></tr></thead>
+                                <tbody>
+                                <tr th:each="t : ${stats.recentActivity}">
+                                    <td th:text="${t.member.fullName}">Member</td>
+                                    <td th:text="${t.book.title}">Book</td>
+                                    <td>
+                                        <span class="badge text-bg-success" th:if="${t.returnedAt != null}">Returned</span>
+                                        <span class="badge text-bg-info" th:if="${t.returnedAt == null}">Borrowed</span>
+                                    </td>
+                                    <td class="small text-nowrap"
+                                        th:text="${#temporals.format(t.returnedAt != null ? t.returnedAt : t.borrowedAt, 'dd MMM yyyy HH:mm')}">Date</td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(stats.recentActivity)}"><td colspan="4" class="text-center text-muted py-4">No activity yet.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+    </div>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

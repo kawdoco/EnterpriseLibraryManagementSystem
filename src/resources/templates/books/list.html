@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head('Books')}"></head>
+<body>
+<div class="app-shell">
+    <nav th:replace="~{fragments/layout :: sidebar('books')}"></nav>
+    <div class="app-main">
+        <header th:replace="~{fragments/layout :: topbar('Books')}"></header>
+        <main class="app-content">
+            <div th:replace="~{fragments/layout :: notifications}"></div>
+
+            <div class="card">
+                <div class="card-header d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                    <form class="d-flex gap-2" th:action="@{/books}" method="get" role="search">
+                        <label for="q" class="visually-hidden">Search books</label>
+                        <input type="search" class="form-control" id="q" name="q" th:value="${q}" placeholder="Title, author, ISBN, category or tag">
+                        <button class="btn btn-outline-primary" type="submit"><i class="bi bi-search"></i> Search</button>
+                    </form>
+                    <a class="btn btn-primary" th:href="@{/books/new}"><i class="bi bi-journal-plus"></i> Register book</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead><tr><th>Title</th><th>Author</th><th>ISBN</th><th>Category</th><th>RFID tag</th><th>Status</th><th class="text-end">Borrowed</th><th class="text-end">Actions</th></tr></thead>
+                        <tbody>
+                        <tr th:each="b : ${books.content}">
+                            <td th:text="${b.title}">Title</td>
+                            <td th:text="${b.author}">Author</td>
+                            <td class="uid" th:text="${b.isbn}">ISBN</td>
+                            <td th:text="${b.category} ?: '-'">Category</td>
+                            <td><span class="uid" th:if="${b.rfidTagUid}" th:text="${b.rfidTagUid}">UID</span>
+                                <span class="text-muted" th:unless="${b.rfidTagUid}">not assigned</span></td>
+                            <td><span th:replace="~{fragments/layout :: bookStatus(${b.status.name()}, ${b.active})}"></span></td>
+                            <td class="text-end" th:text="${b.borrowCount}">0</td>
+                            <td class="text-end text-nowrap">
+                                <a class="btn btn-sm btn-outline-primary" th:href="@{/books/{id}/edit(id=${b.id})}">Edit</a>
+                                <form sec:authorize="hasRole('ADMIN')" th:if="${b.active}" th:action="@{/books/{id}/deactivate(id=${b.id})}" method="post" class="d-inline"
+                                      data-confirm="Deactivate this book copy? It will no longer be borrowable. History is kept.">
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Deactivate</button>
+                                </form>
+                                <form sec:authorize="hasRole('ADMIN')" th:unless="${b.active}" th:action="@{/books/{id}/activate(id=${b.id})}" method="post" class="d-inline">
+                                    <button class="btn btn-sm btn-outline-success" type="submit">Reactivate</button>
+                                </form>
+                            </td>
+                        </tr>
+                        <tr th:if="${books.empty}"><td colspan="8" class="text-center text-muted py-4">No books found.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer bg-transparent d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <span class="small text-muted"><span th:text="${books.totalElements}">0</span> physical cop(ies)</span>
+                    <nav th:replace="~{fragments/layout :: pager(${books}, '/books', ${q})}"></nav>
+                </div>
+            </div>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+    </div>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

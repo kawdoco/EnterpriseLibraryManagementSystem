@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head('Member')}"></head>
+<body>
+<div class="app-shell">
+    <nav th:replace="~{fragments/layout :: sidebar('members')}"></nav>
+    <div class="app-main">
+        <header th:replace="~{fragments/layout :: topbar('Member profile')}"></header>
+        <main class="app-content">
+            <div th:replace="~{fragments/layout :: notifications}"></div>
+
+            <div class="row g-3">
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span th:text="${member.fullName}">Name</span>
+                            <span th:replace="~{fragments/layout :: memberStatus(${member.blacklisted}, ${member.active})}"></span>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row mb-0">
+                                <dt class="col-sm-4">Member code</dt><dd class="col-sm-8 uid" th:text="${member.memberCode}">code</dd>
+                                <dt class="col-sm-4">Email</dt><dd class="col-sm-8" th:text="${member.email} ?: '-'">email</dd>
+                                <dt class="col-sm-4">Phone</dt><dd class="col-sm-8" th:text="${member.phone} ?: '-'">phone</dd>
+                                <dt class="col-sm-4">Address</dt><dd class="col-sm-8" th:text="${member.address} ?: '-'">address</dd>
+                                <dt class="col-sm-4">NFC card</dt>
+                                <dd class="col-sm-8"><span class="uid" th:if="${member.rfidCardUid}" th:text="${member.rfidCardUid}">UID</span>
+                                    <span class="text-muted" th:unless="${member.rfidCardUid}">not assigned</span></dd>
+                                <dt class="col-sm-4">Registered</dt><dd class="col-sm-8" th:text="${#temporals.format(member.createdAt, 'dd MMM yyyy HH:mm')}">date</dd>
+                                <dt class="col-sm-4">Outstanding fines</dt>
+                                <dd class="col-sm-8 fw-semibold"><span th:replace="~{fragments/layout :: money(${outstanding})}"></span>
+                                    <span class="small text-muted fw-normal">(blacklist above <span th:replace="~{fragments/layout :: money(${blacklistThreshold})}"></span>)</span></dd>
+                            </dl>
+                        </div>
+                        <div class="card-footer bg-transparent d-flex flex-wrap gap-2">
+                            <a class="btn btn-sm btn-primary" th:href="@{/members/{id}/edit(id=${member.id})}"><i class="bi bi-pencil"></i> Edit</a>
+                            <form sec:authorize="hasRole('ADMIN')" th:if="${member.active}" th:action="@{/members/{id}/deactivate(id=${member.id})}" method="post" class="m-0"
+                                  data-confirm="Deactivate this member? They will no longer be able to borrow books. History is kept.">
+                                <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-person-dash"></i> Deactivate</button>
+                            </form>
+                            <form sec:authorize="hasRole('ADMIN')" th:unless="${member.active}" th:action="@{/members/{id}/activate(id=${member.id})}" method="post" class="m-0">
+                                <button class="btn btn-sm btn-outline-success" type="submit"><i class="bi bi-person-check"></i> Reactivate</button>
+                            </form>
+                            <a class="btn btn-sm btn-outline-secondary ms-auto" th:href="@{/members}">Back to list</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6 d-flex flex-column gap-3">
+                    <div class="card">
+                        <div class="card-header">Assign or replace NFC card</div>
+                        <div class="card-body">
+                            <form th:action="@{/members/{id}/card(id=${member.id})}" method="post" class="d-flex gap-2">
+                                <label for="cardUid" class="visually-hidden">Card UID</label>
+                                <input type="text" class="form-control uid uid-input" id="cardUid" name="rfidCardUid"
+                                       placeholder="Card UID, e.g. 04A1B2C3" required autocomplete="off">
+                                <button type="submit" class="btn btn-outline-primary text-nowrap">Assign</button>
+                            </form>
+                            <div class="mt-1" data-capture-wrap><button type="button" class="btn btn-sm btn-outline-secondary" data-capture-target="#cardUid" data-capture-kind="member"><i class="bi bi-broadcast"></i> Scan card with reader</button><span data-capture-status class="small ms-2"></span></div>
+                        </div>
+                    </div>
+
+                    <div class="card" sec:authorize="hasRole('ADMIN')">
+                        <div class="card-header">Blacklist</div>
+                        <div class="card-body">
+                            <form th:if="${!member.blacklisted}" th:action="@{/members/{id}/blacklist(id=${member.id})}" method="post"
+                                  data-confirm="Blacklist this member? They will be blocked from borrowing until an administrator clears it.">
+                                <label for="blReason" class="form-label">Reason (required, recorded in the audit log)</label>
+                                <div class="d-flex gap-2">
+                                    <input type="text" class="form-control" id="blReason" name="reason" maxlength="300" required>
+                                    <button type="submit" class="btn btn-outline-danger text-nowrap">Blacklist</button>
+                                </div>
+                            </form>
+                            <form th:if="${member.blacklisted}" th:action="@{/members/{id}/clear-blacklist(id=${member.id})}" method="post"
+                                  data-confirm="Clear the blacklist for this member? This administrative action is recorded in the audit log.">
+                                <input type="hidden" name="returnTo" th:value="${'/members/' + member.id}">
+                                <p class="small text-muted mb-2">
+                                    Payments never clear a blacklist automatically. Clearing is allowed when outstanding fines are at or below the
+                                    threshold; above it, tick the override box.
+                                </p>
+                                <label for="clReason" class="form-label">Reason (required)</label>
+                                <input type="text" class="form-control mb-2" id="clReason" name="reason" maxlength="300" required>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="override" name="override" value="true">
+                                    <label class="form-check-label" for="override">Override even though fines exceed the threshold</label>
+                                </div>
+                                <button type="submit" class="btn btn-outline-success">Clear blacklist</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">Books currently borrowed</div>
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead><tr><th>Book</th><th>Borrowed</th><th>Due</th><th>Status</th></tr></thead>
+                                <tbody>
+                                <tr th:each="t : ${loans}">
+                                    <td th:text="${t.book.title}">Title</td>
+                                    <td th:text="${#temporals.format(t.borrowedAt, 'dd MMM yyyy')}">date</td>
+                                    <td th:text="${#temporals.format(t.dueDate, 'dd MMM yyyy')}">date</td>
+                                    <td><span th:replace="~{fragments/layout :: txStatus(${t.status.name()}, ${t.dueDate}, ${today})}"></span></td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(loans)}"><td colspan="4" class="text-center text-muted py-3">No active loans.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+    </div>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head('Reports')}"></head>
+<body>
+<div class="app-shell">
+    <nav th:replace="~{fragments/layout :: sidebar('reports')}"></nav>
+    <div class="app-main">
+        <header th:replace="~{fragments/layout :: topbar('Reports')}"></header>
+        <main class="app-content">
+            <div th:replace="~{fragments/layout :: notifications}"></div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-header">Collection</div>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between"><span>Registered members</span><strong th:text="${stats.totalMembers}">0</strong></li>
+                            <li class="list-group-item d-flex justify-content-between"><span>Physical books</span><strong th:text="${stats.totalBooks}">0</strong></li>
+                            <li class="list-group-item d-flex justify-content-between"><span>Available</span><strong th:text="${stats.availableBooks}">0</strong></li>
+                            <li class="list-group-item d-flex justify-content-between"><span>Borrowed</span><strong th:text="${stats.borrowedBooks}">0</strong></li>
+                            <li class="list-group-item d-flex justify-content-between"><span>Overdue</span><strong class="text-danger" th:text="${stats.overdueBooks}">0</strong></li>
+                            <li class="list-group-item d-flex justify-content-between"><span>Blacklisted members</span><strong th:text="${stats.blacklistedMembers}">0</strong></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-header">Fines</div>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between"><span>Total assessed (owed)</span><strong><span th:replace="~{fragments/layout :: money(${stats.assessedFines})}"></span></strong></li>
+                            <li class="list-group-item d-flex justify-content-between"><span>Total collected (recorded payments)</span><strong class="text-success"><span th:replace="~{fragments/layout :: money(${stats.collectedFines})}"></span></strong></li>
+                            <li class="list-group-item d-flex justify-content-between"><span>Total outstanding</span><strong class="text-danger"><span th:replace="~{fragments/layout :: money(${stats.outstandingFines})}"></span></strong></li>
+                        </ul>
+                        <div class="card-footer bg-transparent small text-muted">
+                            Collected = sum of recorded payments only. Outstanding = assessed minus collected.
+                            Rate: <span th:replace="~{fragments/layout :: money(${finePerDay})}"></span> per overdue day.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header">Top 5 most borrowed books</div>
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead><tr><th>#</th><th>Title</th><th>Author</th><th>ISBN</th><th class="text-end">Times borrowed</th></tr></thead>
+                        <tbody>
+                        <tr th:each="b, it : ${stats.topBooks}">
+                            <td th:text="${it.count}">1</td><td th:text="${b.title}">Title</td><td th:text="${b.author}">Author</td>
+                            <td class="uid" th:text="${b.isbn}">ISBN</td><td class="text-end" th:text="${b.borrowCount}">0</td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(stats.topBooks)}"><td colspan="5" class="text-center text-muted py-3">No data yet.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">Audit log</div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead><tr><th>When</th><th>Action</th><th>By</th><th>Details</th></tr></thead>
+                        <tbody>
+                        <tr th:each="a : ${audit.content}">
+                            <td class="small text-nowrap" th:text="${#temporals.format(a.createdAt, 'dd MMM yyyy HH:mm:ss')}">date</td>
+                            <td><span class="badge text-bg-secondary" th:text="${a.action}">ACTION</span></td>
+                            <td class="small" th:text="${a.actor}">admin</td>
+                            <td class="small" th:text="${a.details}">details</td>
+                        </tr>
+                        <tr th:if="${audit.empty}"><td colspan="4" class="text-center text-muted py-3">No audit entries yet.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <nav th:replace="~{fragments/layout :: pager(${audit}, '/reports', ${q})}"></nav>
+                </div>
+            </div>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+    </div>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

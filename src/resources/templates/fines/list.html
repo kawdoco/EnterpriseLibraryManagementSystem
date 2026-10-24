@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head('Outstanding fines')}"></head>
+<body>
+<div class="app-shell">
+    <nav th:replace="~{fragments/layout :: sidebar('fines')}"></nav>
+    <div class="app-main">
+        <header th:replace="~{fragments/layout :: topbar('Outstanding fines')}"></header>
+        <main class="app-content">
+            <div th:replace="~{fragments/layout :: notifications}"></div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6"><div class="card stat-card"><div class="icon bg-c-amber"><i class="bi bi-cash-stack"></i></div>
+                    <div><div class="value fs-5"><span th:replace="~{fragments/layout :: money(${totalOutstanding})}"></span></div><div class="label">Total outstanding</div></div></div></div>
+            </div>
+
+            <div class="card">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead><tr><th>Member</th><th>Book</th><th>Returned</th><th class="text-end">Assessed</th><th class="text-end">Paid</th><th class="text-end">Outstanding</th><th class="text-end">Action</th></tr></thead>
+                        <tbody>
+                        <tr th:each="r : ${rows.content}">
+                            <td><a th:href="@{/members/{id}(id=${r.transaction.member.id})}" th:text="${r.transaction.member.fullName}">Member</a>
+                                <span class="badge text-bg-danger ms-1" th:if="${r.transaction.member.blacklisted}">BLACKLISTED</span></td>
+                            <td th:text="${r.transaction.book.title}">Book</td>
+                            <td class="small text-nowrap"><span th:if="${r.transaction.returnedAt}" th:text="${#temporals.format(r.transaction.returnedAt, 'dd MMM yyyy')}">date</span></td>
+                            <td class="text-end"><span th:replace="~{fragments/layout :: money(${r.assessed})}"></span></td>
+                            <td class="text-end"><span th:replace="~{fragments/layout :: money(${r.paid})}"></span></td>
+                            <td class="text-end fw-semibold"><span th:replace="~{fragments/layout :: money(${r.outstanding})}"></span></td>
+                            <td class="text-end"><a class="btn btn-sm btn-primary" th:href="@{/fines/pay/{id}(id=${r.transaction.id})}"><i class="bi bi-cash"></i> Record payment</a></td>
+                        </tr>
+                        <tr th:if="${rows.empty}"><td colspan="7" class="text-center text-muted py-4">No outstanding fines.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <nav th:replace="~{fragments/layout :: pager(${rows}, '/fines', ${q})}"></nav>
+                </div>
+            </div>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+    </div>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

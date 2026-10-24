@@ -1,0 +1,19 @@
+# =====================================================================
+#  Settings for THIS computer. Spring Boot loads this file automatically
+#  (folder ./config next to pom.xml) and it overrides the defaults in
+#  src/main/resources/application.properties.
+#  It is listed in .gitignore: never commit or share it (it holds passwords).
+# =====================================================================
+
+# --- Database (the MySQL password you created) ---
+spring.datasource.password=YOUR_MYSQL_PASSWORD
+
+# --- Arduino reader (leave empty for auto-detect) ---
+library.serial.port=
+
+# --- Accounts: each is created on first start ONLY if it does not exist yet ---
+library.admin.initial-username=admin
+library.admin.initial-password=CHOOSE_A_PASSWORD_OF_8_OR_MORE_CHARACTERS
+# Staff = everyday librarian login with a simpler menu (demo account, change before real use)
+library.admin.initial-staff-username=staff
+library.admin.initial-staff-password=CHOOSE_ANOTHER_PASSWORD

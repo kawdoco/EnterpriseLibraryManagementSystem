@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head('Transactions')}"></head>
+<body>
+<div class="app-shell">
+    <nav th:replace="~{fragments/layout :: sidebar('transactions')}"></nav>
+    <div class="app-main">
+        <header th:replace="~{fragments/layout :: topbar('Borrowing transactions')}"></header>
+        <main class="app-content">
+            <div th:replace="~{fragments/layout :: notifications}"></div>
+
+            <div class="card">
+                <div class="card-header">
+                    <form class="row g-2 align-items-center" th:action="@{/transactions}" method="get" role="search">
+                        <div class="col-sm-6 col-md-5">
+                            <label for="q" class="visually-hidden">Search</label>
+                            <input type="search" class="form-control" id="q" name="q" th:value="${q}" placeholder="Member name, member code or book title">
+                        </div>
+                        <div class="col-sm-3 col-md-3">
+                            <label for="status" class="visually-hidden">Status</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="" th:selected="${status == ''}">All statuses</option>
+                                <option value="BORROWED" th:selected="${status == 'BORROWED'}">Borrowed</option>
+                                <option value="RETURNED" th:selected="${status == 'RETURNED'}">Returned</option>
+                            </select>
+                        </div>
+                        <div class="col-auto"><button class="btn btn-outline-primary" type="submit"><i class="bi bi-funnel"></i> Filter</button></div>
+                    </form>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead><tr><th>#</th><th>Member</th><th>Book</th><th>Borrowed</th><th>Due</th><th>Returned</th><th class="text-end">Fine</th><th>Status</th></tr></thead>
+                        <tbody>
+                        <tr th:each="t : ${transactions.content}">
+                            <td class="text-muted" th:text="${t.id}">1</td>
+                            <td><a th:href="@{/members/{id}(id=${t.member.id})}" th:text="${t.member.fullName}">Member</a></td>
+                            <td th:text="${t.book.title}">Book</td>
+                            <td class="small text-nowrap" th:text="${#temporals.format(t.borrowedAt, 'dd MMM yyyy HH:mm')}">date</td>
+                            <td class="small text-nowrap" th:text="${#temporals.format(t.dueDate, 'dd MMM yyyy')}">date</td>
+                            <td class="small text-nowrap"><span th:if="${t.returnedAt}" th:text="${#temporals.format(t.returnedAt, 'dd MMM yyyy HH:mm')}">date</span>
+                                <span class="text-muted" th:unless="${t.returnedAt}">-</span></td>
+                            <td class="text-end"><span th:replace="~{fragments/layout :: money(${t.fineAmount})}"></span></td>
+                            <td><span th:replace="~{fragments/layout :: txStatus(${t.status.name()}, ${t.dueDate}, ${today})}"></span></td>
+                        </tr>
+                        <tr th:if="${transactions.empty}"><td colspan="8" class="text-center text-muted py-4">No transactions found.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer bg-transparent d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <span class="small text-muted"><span th:text="${transactions.totalElements}">0</span> transaction(s). Transactions are permanent records and cannot be deleted.</span>
+                    <nav th:if="${transactions.totalPages > 1}" aria-label="Pagination">
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item" th:classappend="${transactions.first} ? 'disabled'">
+                                <a class="page-link" th:href="@{/transactions(page=${transactions.number - 1}, q=${q}, status=${status})}">Previous</a></li>
+                            <li class="page-item disabled"><span class="page-link" th:text="${transactions.number + 1} + ' / ' + ${transactions.totalPages}">1 / 1</span></li>
+                            <li class="page-item" th:classappend="${transactions.last} ? 'disabled'">
+                                <a class="page-link" th:href="@{/transactions(page=${transactions.number + 1}, q=${q}, status=${status})}">Next</a></li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+    </div>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

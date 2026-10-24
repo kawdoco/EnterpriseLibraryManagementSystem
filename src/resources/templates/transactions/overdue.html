@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head('Overdue')}"></head>
+<body>
+<div class="app-shell">
+    <nav th:replace="~{fragments/layout :: sidebar('overdue')}"></nav>
+    <div class="app-main">
+        <header th:replace="~{fragments/layout :: topbar('Overdue books')}"></header>
+        <main class="app-content">
+            <div th:replace="~{fragments/layout :: notifications}"></div>
+
+            <div class="alert alert-info small">
+                Fine = overdue days &times; <span th:replace="~{fragments/layout :: money(${finePerDay})}"></span> per day.
+                The projected fine below is what the member would owe if the book were returned <strong>today</strong>; it is only assessed at return.
+            </div>
+
+            <div class="card">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead><tr><th>Member</th><th>Contact</th><th>Book</th><th>Due</th><th class="text-end">Days overdue</th><th class="text-end">Projected fine</th></tr></thead>
+                        <tbody>
+                        <tr th:each="r : ${rows.content}">
+                            <td><a th:href="@{/members/{id}(id=${r.transaction.member.id})}" th:text="${r.transaction.member.fullName}">Member</a></td>
+                            <td class="small" th:text="${r.transaction.member.email} ?: ${r.transaction.member.phone} ?: '-'">contact</td>
+                            <td th:text="${r.transaction.book.title}">Book</td>
+                            <td class="small text-nowrap" th:text="${#temporals.format(r.transaction.dueDate, 'dd MMM yyyy')}">date</td>
+                            <td class="text-end"><span class="badge text-bg-danger" th:text="${r.overdueDays}">0</span></td>
+                            <td class="text-end"><span th:replace="~{fragments/layout :: money(${r.projectedFine})}"></span></td>
+                        </tr>
+                        <tr th:if="${rows.empty}"><td colspan="6" class="text-center text-muted py-4">No overdue books.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <nav th:replace="~{fragments/layout :: pager(${rows}, '/transactions/overdue', ${q})}"></nav>
+                </div>
+            </div>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+    </div>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

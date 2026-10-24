@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="en">
+
+<!-- ============ HEAD ============ -->
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="_csrf" th:content="${_csrf != null} ? ${_csrf.token} : ''">
+    <meta name="_csrf_header" th:content="${_csrf != null} ? ${_csrf.headerName} : 'X-CSRF-TOKEN'">
+    <meta name="api-base" th:content="@{/api/rfid}">
+    <title th:text="${title} + ' | ' + (${libraryName} ?: 'Smart Library')">Smart Library</title>
+    <link th:href="@{/vendor/bootstrap/css/bootstrap.min.css}" rel="stylesheet">
+    <link th:href="@{/vendor/bootstrap-icons/font/bootstrap-icons.min.css}" rel="stylesheet">
+    <link th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+
+<body>
+
+<!-- ============ SIDEBAR ============ -->
+<nav th:fragment="sidebar(active)" class="app-sidebar" id="appSidebar" aria-label="Main navigation">
+    <a class="brand" th:href="@{/}">
+        <i class="bi bi-book-half" aria-hidden="true"></i>
+        <span th:text="${libraryName} ?: 'Smart Library'">Smart Library</span>
+    </a>
+    <ul class="nav flex-column">
+        <li><a class="nav-link" th:classappend="${active == 'dashboard'} ? 'active'" th:href="@{/}"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+        <li class="nav-section">Counter</li>
+        <li><a class="nav-link" th:classappend="${active == 'counter'} ? 'active'" th:href="@{/rfid/counter}"><i class="bi bi-broadcast-pin"></i> RFID Counter</a></li>
+        <li class="nav-section">People</li>
+        <li><a class="nav-link" th:classappend="${active == 'members'} ? 'active'" th:href="@{/members}"><i class="bi bi-people"></i> Members</a></li>
+        <li sec:authorize="hasRole('ADMIN')"><a class="nav-link" th:classappend="${active == 'blacklisted'} ? 'active'" th:href="@{/members/blacklisted}"><i class="bi bi-slash-circle"></i> Blacklisted</a></li>
+        <li class="nav-section">Collection</li>
+        <li><a class="nav-link" th:classappend="${active == 'books'} ? 'active'" th:href="@{/books}"><i class="bi bi-journal-bookmark"></i> Books</a></li>
+        <li class="nav-section">Circulation</li>
+        <li><a class="nav-link" th:classappend="${active == 'transactions'} ? 'active'" th:href="@{/transactions}"><i class="bi bi-arrow-left-right"></i> Transactions</a></li>
+        <li><a class="nav-link" th:classappend="${active == 'overdue'} ? 'active'" th:href="@{/transactions/overdue}"><i class="bi bi-alarm"></i> Overdue</a></li>
+        <li sec:authorize="hasRole('ADMIN')" class="nav-section">Finance</li>
+        <li sec:authorize="hasRole('ADMIN')"><a class="nav-link" th:classappend="${active == 'fines'} ? 'active'" th:href="@{/fines}"><i class="bi bi-cash-coin"></i> Outstanding fines</a></li>
+        <li sec:authorize="hasRole('ADMIN')"><a class="nav-link" th:classappend="${active == 'payments'} ? 'active'" th:href="@{/fines/payments}"><i class="bi bi-receipt"></i> Payments</a></li>
+        <li sec:authorize="hasRole('ADMIN')" class="nav-section">Insight</li>
+        <li sec:authorize="hasRole('ADMIN')"><a class="nav-link" th:classappend="${active == 'reports'} ? 'active'" th:href="@{/reports}"><i class="bi bi-bar-chart-line"></i> Reports</a></li>
+    </ul>
+</nav>
+
+<!-- ============ TOP BAR ============ -->
+<header th:fragment="topbar(title)" class="app-topbar">
+    <button class="btn btn-outline-secondary btn-sm d-lg-none" type="button" id="sidebarToggle" aria-label="Toggle navigation">
+        <i class="bi bi-list"></i>
+    </button>
+    <h1 class="page-title" th:text="${title}">Title</h1>
+    <div class="ms-auto d-flex align-items-center gap-3">
+        <a class="reader-badge" id="readerBadge" th:href="@{/rfid/counter}" title="RFID reader status">
+            <span class="dot" aria-hidden="true"></span><span class="txt">Reader: checking...</span>
+        </a>
+        <span class="text-muted small d-none d-md-inline"><i class="bi bi-person-circle"></i>
+            <span sec:authentication="name">admin</span><span class="badge text-bg-light border ms-1" sec:authorize="hasRole('ADMIN')">Admin</span><span class="badge text-bg-light border ms-1" sec:authorize="hasRole('STAFF')">Staff</span></span>
+        <form th:action="@{/logout}" method="post" class="m-0">
+            <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-box-arrow-right"></i> Sign out</button>
+        </form>
+    </div>
+</header>
+
+<!-- ============ NOTIFICATIONS (flash messages) ============ -->
+<div th:fragment="notifications" class="notifications">
+    <div class="alert alert-success alert-dismissible fade show" role="alert" th:if="${success}">
+        <i class="bi bi-check-circle-fill"></i> <span th:text="${success}">Done</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div class="alert alert-danger alert-dismissible fade show" role="alert" th:if="${error}">
+        <i class="bi bi-exclamation-triangle-fill"></i> <span th:text="${error}">Error</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div class="alert alert-warning alert-dismissible fade show" role="alert" th:if="${warning}">
+        <i class="bi bi-info-circle-fill"></i> <span th:text="${warning}">Warning</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+</div>
+
+<!-- ============ FOOTER ============ -->
+<footer th:fragment="footer" class="app-footer">
+    <span th:text="${libraryName} ?: 'Smart Library'">Smart Library</span> &middot; Library Management System
+</footer>
+
+<!-- ============ SCRIPTS + CONFIRM DIALOG ============ -->
+<th:block th:fragment="scripts">
+    <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="confirmTitle">Please confirm</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cancel"></button>
+                </div>
+                <div class="modal-body" id="confirmMessage">Are you sure?</div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmOk">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script th:src="@{/vendor/bootstrap/js/bootstrap.bundle.min.js}"></script>
+    <script th:src="@{/js/app.js}"></script>
+</th:block>
+
+<!-- ============ PAGER ============ -->
+<nav th:fragment="pager(page, path, q)" th:if="${page.totalPages > 1}" aria-label="Pagination">
+    <ul class="pagination pagination-sm justify-content-center mb-0">
+        <li class="page-item" th:classappend="${page.first} ? 'disabled'">
+            <a class="page-link" th:href="@{${path}(page=${page.number - 1}, q=${q})}">Previous</a>
+        </li>
+        <li class="page-item" th:each="i : ${#numbers.sequence(page.number > 3 ? page.number - 3 : 0, page.number + 3 < page.totalPages - 1 ? page.number + 3 : page.totalPages - 1)}"
+            th:classappend="${i == page.number} ? 'active'">
+            <a class="page-link" th:href="@{${path}(page=${i}, q=${q})}" th:text="${i + 1}">1</a>
+        </li>
+        <li class="page-item" th:classappend="${page.last} ? 'disabled'">
+            <a class="page-link" th:href="@{${path}(page=${page.number + 1}, q=${q})}">Next</a>
+        </li>
+    </ul>
+</nav>
+
+<!-- ============ BADGES ============ -->
+<span th:fragment="bookStatus(status, active)">
+    <span class="badge" th:classappend="${status == 'AVAILABLE'} ? 'text-bg-success' : 'text-bg-warning'" th:text="${status}">AVAILABLE</span>
+    <span class="badge text-bg-secondary" th:unless="${active}">INACTIVE</span>
+</span>
+
+<span th:fragment="txStatus(status, due, today)">
+    <span class="badge text-bg-success" th:if="${status == 'RETURNED'}">RETURNED</span>
+    <span class="badge text-bg-danger" th:if="${status == 'BORROWED' and due.isBefore(today)}">OVERDUE</span>
+    <span class="badge text-bg-info" th:if="${status == 'BORROWED' and !due.isBefore(today)}">BORROWED</span>
+</span>
+
+<span th:fragment="memberStatus(blacklisted, active)">
+    <span class="badge text-bg-danger" th:if="${blacklisted}">BLACKLISTED</span>
+    <span class="badge text-bg-secondary" th:unless="${active}">INACTIVE</span>
+    <span class="badge text-bg-success" th:if="${active and !blacklisted}">ACTIVE</span>
+</span>
+
+<!-- ============ MONEY ============ -->
+<span th:fragment="money(v)" class="text-nowrap" th:text="${currency} + ' ' + ${#numbers.formatDecimal(v, 1, 'COMMA', 2, 'POINT')}">LKR 0.00</span>
+
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head('Blacklisted members')}"></head>
+<body>
+<div class="app-shell">
+    <nav th:replace="~{fragments/layout :: sidebar('blacklisted')}"></nav>
+    <div class="app-main">
+        <header th:replace="~{fragments/layout :: topbar('Blacklisted members')}"></header>
+        <main class="app-content">
+            <div th:replace="~{fragments/layout :: notifications}"></div>
+
+            <div class="alert alert-info small">
+                Members are blacklisted when outstanding assessed fines exceed
+                <strong><span th:replace="~{fragments/layout :: money(${blacklistThreshold})}"></span></strong>.
+                Recording payments does <strong>not</strong> clear the blacklist; an administrator clears it here with a reason, and the action is audited.
+            </div>
+
+            <div class="card">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead><tr><th>Member</th><th>Contact</th><th>Outstanding</th><th style="min-width:340px">Clear blacklist</th></tr></thead>
+                        <tbody>
+                        <tr th:each="m : ${members.content}">
+                            <td><a th:href="@{/members/{id}(id=${m.id})}" th:text="${m.fullName}">Name</a>
+                                <div class="small uid text-muted" th:text="${m.memberCode}">code</div></td>
+                            <td class="small" th:text="${m.email} ?: ${m.phone} ?: '-'">contact</td>
+                            <td><span th:replace="~{fragments/layout :: money(${outstanding[m.id]})}"></span></td>
+                            <td>
+                                <form th:action="@{/members/{id}/clear-blacklist(id=${m.id})}" method="post"
+                                      data-confirm="Clear the blacklist for this member? This is recorded in the audit log.">
+                                    <div class="input-group input-group-sm mb-1">
+                                        <input type="text" class="form-control" name="reason" maxlength="300" placeholder="Reason (required)" required aria-label="Reason">
+                                        <button type="submit" class="btn btn-outline-success">Clear</button>
+                                    </div>
+                                    <div class="form-check small">
+                                        <input class="form-check-input" type="checkbox" name="override" value="true" th:id="${'ov' + m.id}">
+                                        <label class="form-check-label" th:for="${'ov' + m.id}">Override (fines still above threshold)</label>
+                                    </div>
+                                </form>
+                            </td>
+                        </tr>
+                        <tr th:if="${members.empty}"><td colspan="4" class="text-center text-muted py-4">No blacklisted members.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <nav th:replace="~{fragments/layout :: pager(${members}, '/members/blacklisted', ${q})}"></nav>
+                </div>
+            </div>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+    </div>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

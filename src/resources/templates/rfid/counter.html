@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head('RFID Counter')}"></head>
+<body>
+<div class="app-shell">
+    <nav th:replace="~{fragments/layout :: sidebar('counter')}"></nav>
+    <div class="app-main">
+        <header th:replace="~{fragments/layout :: topbar('RFID Counter')}"></header>
+        <main class="app-content">
+            <div th:replace="~{fragments/layout :: notifications}"></div>
+
+            <div id="counterApp" th:attr="data-base=@{/api/rfid},data-currency=${currency}">
+
+                <div id="loadingBar" class="alert alert-secondary d-flex align-items-center gap-2 py-2">
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    Connecting to the library server...
+                </div>
+                <div id="linkLost" class="alert alert-warning py-2 d-none" role="alert">
+                    <i class="bi bi-wifi-off"></i> Live updates interrupted. Retrying automatically.
+                </div>
+
+                <!-- one line: is the reader working? -->
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                    <i class="bi bi-usb-symbol"></i>
+                    <span id="readerState" class="badge text-bg-secondary">-</span>
+                    <span id="readerMessage" class="small text-muted flex-grow-1">-</span>
+                    <span class="small text-muted d-none d-md-inline">Port: <strong id="readerPort">-</strong></span>
+                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#advanced" aria-expanded="false" aria-controls="advanced">
+                        <i class="bi bi-gear"></i> Advanced
+                    </button>
+                </div>
+
+                <!-- technical controls: hidden unless you open them -->
+                <div class="collapse mb-3" id="advanced">
+                    <div class="row g-3">
+                        <div class="col-lg-6">
+                            <div class="card h-100">
+                                <div class="card-header">Serial port</div>
+                                <div class="card-body">
+                                    <label for="portSelect" class="form-label small mb-1">Port the Arduino is connected to</label>
+                                    <select id="portSelect" class="form-select form-select-sm mb-2"></select>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" id="portApply" class="btn btn-sm btn-outline-primary">Use this port</button>
+                                        <button type="button" id="portRefresh" class="btn btn-sm btn-outline-secondary" title="Rescan ports"><i class="bi bi-arrow-repeat"></i></button>
+                                        <button type="button" id="reconnectBtn" class="btn btn-sm btn-outline-secondary"><i class="bi bi-plug"></i> Reconnect</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="card h-100">
+                                <div class="card-header">Counter mode</div>
+                                <div class="card-body">
+                                    <div class="btn-group w-100" role="group" aria-label="Counter mode">
+                                        <input type="radio" class="btn-check" name="mode" id="modeAUTO" value="AUTO" autocomplete="off" checked>
+                                        <label class="btn btn-outline-primary" for="modeAUTO">Auto</label>
+                                        <input type="radio" class="btn-check" name="mode" id="modeBORROW" value="BORROW" autocomplete="off">
+                                        <label class="btn btn-outline-primary" for="modeBORROW">Borrow</label>
+                                        <input type="radio" class="btn-check" name="mode" id="modeRETURN" value="RETURN" autocomplete="off">
+                                        <label class="btn btn-outline-primary" for="modeRETURN">Return</label>
+                                    </div>
+                                    <p class="small text-muted mt-2 mb-2" id="modeHelp">-</p>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" role="switch" id="soundToggle" checked>
+                                        <label class="form-check-label small" for="soundToggle">Beep on scan</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">Type a UID instead of scanning <span class="text-muted small fw-normal">(testing only; same workflow)</span></div>
+                                <div class="card-body">
+                                    <form id="manualForm" class="d-flex gap-2" style="max-width:520px" autocomplete="off">
+                                        <label for="manualUid" class="visually-hidden">UID</label>
+                                        <input type="text" id="manualUid" class="form-control uid uid-input" placeholder="e.g. E1CE5968" required>
+                                        <button type="submit" class="btn btn-outline-primary text-nowrap">Process UID</button>
+                                    </form>
+                                    <div id="manualError" class="text-danger small mt-1"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">Scan history</div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover mb-0">
+                                        <thead><tr><th>Time</th><th>UID</th><th>Result</th><th>Details</th></tr></thead>
+                                        <tbody id="recentBody">
+                                        <tr><td colspan="4" class="text-center text-muted py-3">No scans yet.</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- THE counter: one panel that always says what to do next -->
+                <div id="stage" class="card stage-card stage-idle">
+                    <div class="card-body">
+                        <div class="text-center">
+                            <i id="stageIcon" class="bi bi-broadcast stage-icon"></i>
+                            <h2 id="stageTitle" class="stage-title">-</h2>
+                            <p id="stageText" class="stage-text">-</p>
+                        </div>
+
+                        <dl id="resultDetails" class="row small result-details d-none">
+                            <dt class="col-4 row-book">Book</dt><dd class="col-8 row-book" id="rBook">-</dd>
+                            <dt class="col-4 row-member">Member</dt><dd class="col-8 row-member" id="rMember">-</dd>
+                            <dt class="col-4 row-due">Due date</dt><dd class="col-8 row-due" id="rDue">-</dd>
+                            <dt class="col-4 row-late">Days late</dt><dd class="col-8 row-late" id="rLate">-</dd>
+                            <dt class="col-4 row-fine">Fine</dt><dd class="col-8 row-fine" id="rFine">-</dd>
+                        </dl>
+
+                        <div id="memberChip" class="member-chip d-none">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                <div>
+                                    <div class="fw-semibold" id="mName">-</div>
+                                    <div class="small text-muted"><span class="uid" id="mCode">-</span> &middot; <span id="mLoans">-</span> on loan &middot; fines owed <span id="mFines">-</span></div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span id="mBadges"></span>
+                                    <span class="small text-muted">clears in <span id="mCountdown">-</span></span>
+                                    <button type="button" id="clearMember" class="btn btn-sm btn-outline-secondary" disabled>Clear</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-center text-muted small mt-3" id="stageUid"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+    </div>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+<script th:src="@{/js/counter.js}"></script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head('Members')}"></head>
+<body>
+<div class="app-shell">
+    <nav th:replace="~{fragments/layout :: sidebar('members')}"></nav>
+    <div class="app-main">
+        <header th:replace="~{fragments/layout :: topbar('Members')}"></header>
+        <main class="app-content">
+            <div th:replace="~{fragments/layout :: notifications}"></div>
+
+            <div class="card">
+                <div class="card-header d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                    <form class="d-flex gap-2" th:action="@{/members}" method="get" role="search">
+                        <label for="q" class="visually-hidden">Search members</label>
+                        <input type="search" class="form-control" id="q" name="q" th:value="${q}" placeholder="Name, code, email or phone">
+                        <button class="btn btn-outline-primary" type="submit"><i class="bi bi-search"></i> Search</button>
+                    </form>
+                    <a class="btn btn-primary" th:href="@{/members/new}"><i class="bi bi-person-plus"></i> Register member</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead><tr><th>Code</th><th>Name</th><th>Contact</th><th>NFC card</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
+                        <tbody>
+                        <tr th:each="m : ${members.content}">
+                            <td class="uid" th:text="${m.memberCode}">MBR-0001</td>
+                            <td><a th:href="@{/members/{id}(id=${m.id})}" th:text="${m.fullName}">Name</a></td>
+                            <td class="small">
+                                <div th:text="${m.email}" th:if="${m.email}">email</div>
+                                <div class="text-muted" th:text="${m.phone}" th:if="${m.phone}">phone</div>
+                            </td>
+                            <td><span class="uid" th:if="${m.rfidCardUid}" th:text="${m.rfidCardUid}">UID</span>
+                                <span class="text-muted" th:unless="${m.rfidCardUid}">not assigned</span></td>
+                            <td><span th:replace="~{fragments/layout :: memberStatus(${m.blacklisted}, ${m.active})}"></span></td>
+                            <td class="text-end text-nowrap">
+                                <a class="btn btn-sm btn-outline-secondary" th:href="@{/members/{id}(id=${m.id})}">View</a>
+                                <a class="btn btn-sm btn-outline-primary" th:href="@{/members/{id}/edit(id=${m.id})}">Edit</a>
+                            </td>
+                        </tr>
+                        <tr th:if="${members.empty}"><td colspan="6" class="text-center text-muted py-4">No members found.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer bg-transparent d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <span class="small text-muted"><span th:text="${members.totalElements}">0</span> member(s)</span>
+                    <nav th:replace="~{fragments/layout :: pager(${members}, '/members', ${q})}"></nav>
+                </div>
+            </div>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+    </div>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head('Record payment')}"></head>
+<body>
+<div class="app-shell">
+    <nav th:replace="~{fragments/layout :: sidebar('fines')}"></nav>
+    <div class="app-main">
+        <header th:replace="~{fragments/layout :: topbar('Record fine payment')}"></header>
+        <main class="app-content">
+            <div th:replace="~{fragments/layout :: notifications}"></div>
+
+            <div class="card" style="max-width: 640px;">
+                <div class="card-body">
+                    <dl class="row mb-4">
+                        <dt class="col-sm-4">Member</dt><dd class="col-sm-8" th:text="${tx.member.fullName} + ' (' + ${tx.member.memberCode} + ')'">Member</dd>
+                        <dt class="col-sm-4">Book</dt><dd class="col-sm-8" th:text="${tx.book.title}">Book</dd>
+                        <dt class="col-sm-4">Fine assessed</dt><dd class="col-sm-8"><span th:replace="~{fragments/layout :: money(${tx.fineAmount})}"></span></dd>
+                        <dt class="col-sm-4">Still owed</dt><dd class="col-sm-8 fw-semibold"><span th:replace="~{fragments/layout :: money(${outstanding})}"></span></dd>
+                    </dl>
+
+                    <form th:object="${paymentForm}" th:action="@{/fines/pay}" method="post" novalidate
+                          data-confirm="Record this payment? Payments cannot be edited or deleted afterwards.">
+                        <input type="hidden" th:field="*{transactionId}">
+
+                        <div class="alert alert-danger" role="alert" th:if="${#fields.hasGlobalErrors()}">
+                            <div th:each="e : ${#fields.globalErrors()}" th:text="${e}">Error</div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="amount" class="form-label required">Amount</label>
+                                <div class="input-group has-validation">
+                                    <span class="input-group-text" th:text="${currency}">LKR</span>
+                                    <input type="number" step="0.01" min="0.01" class="form-control" id="amount" th:field="*{amount}"
+                                           th:classappend="${#fields.hasErrors('amount')} ? 'is-invalid'" required>
+                                    <div class="invalid-feedback" th:errors="*{amount}">error</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="paymentMethod" class="form-label required">Payment method</label>
+                                <select class="form-select" id="paymentMethod" th:field="*{paymentMethod}"
+                                        th:classappend="${#fields.hasErrors('paymentMethod')} ? 'is-invalid'">
+                                    <option th:each="m : ${paymentMethods}" th:value="${m}" th:text="${m}">CASH</option>
+                                </select>
+                                <div class="invalid-feedback" th:errors="*{paymentMethod}">error</div>
+                            </div>
+                            <div class="col-12">
+                                <label for="referenceNumber" class="form-label">Reference number</label>
+                                <input type="text" class="form-control" id="referenceNumber" th:field="*{referenceNumber}"
+                                       th:classappend="${#fields.hasErrors('referenceNumber')} ? 'is-invalid'" placeholder="Receipt or transfer reference (optional)">
+                                <div class="invalid-feedback" th:errors="*{referenceNumber}">error</div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 d-flex gap-2">
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-check2"></i> Record payment</button>
+                            <a class="btn btn-outline-secondary" th:href="@{/fines}">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+    </div>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

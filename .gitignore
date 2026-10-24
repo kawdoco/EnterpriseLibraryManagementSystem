@@ -1,0 +1,14 @@
+target/
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+*.log
+# local-only overrides and secrets
+application-local.properties
+.env
+
+# local settings with passwords (a template is kept in config/application.properties.example)
+config/application.properties

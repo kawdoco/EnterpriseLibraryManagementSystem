@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head('Payments')}"></head>
+<body>
+<div class="app-shell">
+    <nav th:replace="~{fragments/layout :: sidebar('payments')}"></nav>
+    <div class="app-main">
+        <header th:replace="~{fragments/layout :: topbar('Recorded payments')}"></header>
+        <main class="app-content">
+            <div th:replace="~{fragments/layout :: notifications}"></div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6"><div class="card stat-card"><div class="icon bg-c-teal"><i class="bi bi-wallet2"></i></div>
+                    <div><div class="value fs-5"><span th:replace="~{fragments/layout :: money(${totalCollected})}"></span></div><div class="label">Total collected</div></div></div></div>
+            </div>
+
+            <div class="card">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead><tr><th>Paid at</th><th>Member</th><th>Book</th><th>Method</th><th>Reference</th><th>Recorded by</th><th class="text-end">Amount</th></tr></thead>
+                        <tbody>
+                        <tr th:each="p : ${payments.content}">
+                            <td class="small text-nowrap" th:text="${#temporals.format(p.paidAt, 'dd MMM yyyy HH:mm')}">date</td>
+                            <td th:text="${p.transaction.member.fullName}">Member</td>
+                            <td th:text="${p.transaction.book.title}">Book</td>
+                            <td><span class="badge text-bg-secondary" th:text="${p.paymentMethod}">CASH</span></td>
+                            <td class="small" th:text="${p.referenceNumber} ?: '-'">ref</td>
+                            <td class="small" th:text="${p.recordedBy} ?: '-'">admin</td>
+                            <td class="text-end"><span th:replace="~{fragments/layout :: money(${p.amount})}"></span></td>
+                        </tr>
+                        <tr th:if="${payments.empty}"><td colspan="7" class="text-center text-muted py-4">No payments recorded yet.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <nav th:replace="~{fragments/layout :: pager(${payments}, '/fines/payments', ${q})}"></nav>
+                </div>
+            </div>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+    </div>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>
